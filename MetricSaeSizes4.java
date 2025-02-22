@@ -104,6 +104,8 @@ public class MetricSaeSizes4
   static double saeValueFirst, saeValueLast; // parsed SAE numbers from user
   static JButton saveButton;      // "Save" button for writing output text
   static JButton startButton;     // "Start" button to begin processing
+  static int unitsPerInch;        // SAE is fractional using integers
+  static double unitsPerMm;       // while metric uses floating point
 
 /*
   main() method
@@ -586,7 +588,7 @@ public class MetricSaeSizes4
 */
   static void doStartButton()
   {
-    /* Get and check the user's options. */
+    /* Get and check user's input for options. */
 
     try                           // metric size range
     {
@@ -623,6 +625,33 @@ public class MetricSaeSizes4
       JOptionPane.showMessageDialog(mainFrame,
         "Bias value must be from -1.0 to +1.0"); // no sentence period here
       return;
+    }
+
+    /* Get number of units per millimeter and per inch. */
+
+    switch (metDialogUnits.getSelectedIndex()) // get units per millimeter
+    {
+      case (0): unitsPerMm = 10.0; break;
+      case (1): unitsPerMm = 5.0; break;
+      case (2): unitsPerMm = 2.0; break;
+      case (3): unitsPerMm = 1.0; break;
+      case (4): unitsPerMm = 0.5; break;
+      case (5): unitsPerMm = 0.2; break;
+      case (6): unitsPerMm = 0.1; break;
+      default:  unitsPerMm = 1.0; break;
+    }
+
+    switch (saeDialogUnits.getSelectedIndex()) // get units per inch
+    {
+      case (0): unitsPerInch = 256; break;
+      case (1): unitsPerInch = 128; break;
+      case (2): unitsPerInch = 64; break;
+      case (3): unitsPerInch = 32; break;
+      case (4): unitsPerInch = 16; break;
+      case (5): unitsPerInch = 8; break;
+      case (6): unitsPerInch = 4; break;
+      case (7): unitsPerInch = 2; break;
+      default:  unitsPerInch = 16; break;
     }
 
     /* We have our options.  Disable the "Start" button until we are done, and
@@ -695,6 +724,9 @@ public class MetricSaeSizes4
   parsed, checked for proper values, and saved in our class variables.  This
   code is a mix of integer and floating-point arithmetic, and it really helps
   to understand the difference here.
+
+  There is nothing inherently GUI about this method, and it can be run from a
+  console application so long as <putOutput> does something reasonable.
 */
   static void processData()
   {
@@ -707,38 +739,9 @@ public class MetricSaeSizes4
     double saeExact;              // exact SAE size in inches
     double saeRound;              // SAE size after rounding (inch)
     int saeUnits;                 // number of SAE units (rounded)
-    int unitsPerInch;             // SAE is fractional using integers
-    double unitsPerMm;            // while metric uses floating point
 
-    /* Get the number of units per millimeter and per inch.  This information
-    is used in both directions. */
-
-    switch (metDialogUnits.getSelectedIndex()) // get units per millimeter
-    {
-      case (0): unitsPerMm = 10.0; break;
-      case (1): unitsPerMm = 5.0; break;
-      case (2): unitsPerMm = 2.0; break;
-      case (3): unitsPerMm = 1.0; break;
-      case (4): unitsPerMm = 0.5; break;
-      case (5): unitsPerMm = 0.2; break;
-      case (6): unitsPerMm = 0.1; break;
-      default:  unitsPerMm = 1.0; break;
-    }
-
-    switch (saeDialogUnits.getSelectedIndex()) // get units per inch
-    {
-      case (0): unitsPerInch = 256; break;
-      case (1): unitsPerInch = 128; break;
-      case (2): unitsPerInch = 64; break;
-      case (3): unitsPerInch = 32; break;
-      case (4): unitsPerInch = 16; break;
-      case (5): unitsPerInch = 8; break;
-      case (6): unitsPerInch = 4; break;
-      case (7): unitsPerInch = 2; break;
-      default:  unitsPerInch = 16; break;
-    }
-
-    /* Convert metric to SAE. */
+    /* Convert metric to SAE.  Sizes close to zero are treated as a minimum of
+    one measurement unit.  So, yes, you can put zero as a starting size. */
 
     putOutput("");                // blank line
     putOutput("Metric/millimeter to fractional/inch/SAE/standard:");
@@ -752,6 +755,7 @@ public class MetricSaeSizes4
       metExact = (double) thisUnit / unitsPerMm;
       saeExact = metExact / MM_PER_INCH; // exact size in inches
       saeUnits = (int) Math.round(saeExact * unitsPerInch + biasValue);
+      saeUnits = Math.max(saeUnits, 1);
       saeRound = (double) saeUnits / (double) unitsPerInch;
       ratio = saeRound / saeExact; // ratio of rounded to exact
       if ((ratio > 0.997) && (ratio < 1.003)) flag = " very good";
@@ -778,6 +782,7 @@ public class MetricSaeSizes4
       saeExact = (double) thisUnit / (double) unitsPerInch;
       metExact = saeExact * MM_PER_INCH; // exact size in millimeters
       metUnits = (int) Math.round(metExact * unitsPerMm + biasValue);
+      metUnits = Math.max(metUnits, 1);
       metRound = (double) metUnits / unitsPerMm;
       ratio = metRound / metExact; // ratio of rounded to exact
       if ((ratio > 0.997) && (ratio < 1.003)) flag = " very good";
